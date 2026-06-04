@@ -16,6 +16,13 @@ import { addLeaderboardEntry, leaderboardNameExists } from './Leaderboard';
 
 const GAP = 2;
 
+const getComboText = (combo) => {
+  if (combo === 2) return { text: "COOL x2", color: "#00e5ff" }; // Cyan
+  if (combo === 3) return { text: "GREAT x3", color: "#00e676" }; // Green
+  if (combo === 4) return { text: "UNSTOPPABLE x4", color: "#ffea00" }; // Yellow
+  return { text: "LEGENDARY x" + combo, color: "#d500f9" }; // Purple
+};
+
 export default function OverloadGame({ onHome }) {
   const row = 16;
   const col = 16;
@@ -28,17 +35,15 @@ export default function OverloadGame({ onHome }) {
     score: 0,
     pressure: 100,
     freezeTime: 0,
-    nextWaveTime: 20,
+    nextWaveTime: 16,
     survivalTime: 0,
     comboCount: 0,
-    remainingShuffles: 3,
     nextInfectionStartTime: 0,
     nextInfectionReplenishTime: 0
   });
 
   const [selectedCell, setSelectedCell] = useState(null); // { r, c }
   const [isPaused, setIsPaused] = useState(false);
-  const [currentPath, setCurrentPath] = useState(null); // [{r, c}]
   const [isMuted, setIsMuted] = useState(pikachuAudio.isMuted());
   const [cellSize, setCellSize] = useState(50);
   const [shakeClass, setShakeClass] = useState(''); // Thêm class rung lắc màn hình
@@ -56,6 +61,9 @@ export default function OverloadGame({ onHome }) {
   const canvasRef = useRef(null);
   const requestRef = useRef(null);
   const particlesRef = useRef([]);
+  const activePathsRef = useRef([]);
+  const floatingTextsRef = useRef([]);
+  const shockwavesRef = useRef([]);
 
   // Đồng bộ Refs
   useEffect(() => {
@@ -95,22 +103,23 @@ export default function OverloadGame({ onHome }) {
       score: 0,
       pressure: 100,
       freezeTime: 0,
-      nextWaveTime: 20,
+      nextWaveTime: 16,
       survivalTime: 0,
       comboCount: 0,
-      remainingShuffles: 3,
       nextInfectionStartTime: 0,
       nextInfectionReplenishTime: 0
     });
 
     setSelectedCell(null);
-    setCurrentPath(null);
+    activePathsRef.current = [];
+    particlesRef.current = [];
+    floatingTextsRef.current = [];
+    shockwavesRef.current = [];
     setIsPaused(false);
     setShowLoseModal(false);
     setPlayerName('');
     setNameError('');
     setShakeClass('');
-    particlesRef.current = [];
 
     lastMatchTime.current = Date.now();
 
@@ -144,7 +153,7 @@ export default function OverloadGame({ onHome }) {
         let spawnCount;
 
         if (nextSec <= 90) {
-          waveInterval = 20;
+          waveInterval = 16;
           pairsToSpawn = 2;
           corruptedAge = 90;
           idleThreshold = 10;
@@ -154,7 +163,7 @@ export default function OverloadGame({ onHome }) {
           spreadInterval = 18;
           spawnCount = 1;
         } else if (nextSec <= 180) {
-          waveInterval = 15;
+          waveInterval = 12;
           pairsToSpawn = 3;
           corruptedAge = 70;
           idleThreshold = 8;
@@ -164,7 +173,7 @@ export default function OverloadGame({ onHome }) {
           spreadInterval = 14;
           spawnCount = 2;
         } else {
-          waveInterval = 10;
+          waveInterval = 8;
           pairsToSpawn = 4;
           corruptedAge = 50;
           idleThreshold = 6;
@@ -287,16 +296,24 @@ export default function OverloadGame({ onHome }) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 1. Vẽ laser đường nối nếu có
-    if (currentPath && currentPath.length >= 2) {
+    const now = Date.now();
+    activePathsRef.current = activePathsRef.current.filter(p => now - p.startTime < 480);
+    
+    activePathsRef.current.forEach(p => {
+      const elapsed = now - p.startTime;
+      const alpha = 1 - elapsed / 480;
+      
+      ctx.save();
       ctx.strokeStyle = '#ff3d00';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.shadowBlur = 10;
       ctx.shadowColor = '#ff3d00';
+      ctx.globalAlpha = alpha;
 
       ctx.beginPath();
-      currentPath.forEach((pt, idx) => {
+      p.path.forEach((pt, idx) => {
         const x = pt.c * (cellSize + GAP) + cellSize / 2;
         const y = pt.r * (cellSize + GAP) + cellSize / 2;
         if (idx === 0) ctx.moveTo(x, y);
@@ -307,18 +324,17 @@ export default function OverloadGame({ onHome }) {
       ctx.fillStyle = '#ffdc00';
       ctx.shadowColor = '#ffdc00';
       ctx.shadowBlur = 8;
-      currentPath.forEach(pt => {
+      p.path.forEach(pt => {
         const x = pt.c * (cellSize + GAP) + cellSize / 2;
         const y = pt.r * (cellSize + GAP) + cellSize / 2;
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, Math.PI * 2);
         ctx.fill();
       });
-      ctx.shadowBlur = 0;
-    }
+      ctx.restore();
+    });
 
     // 2. Cập nhật và vẽ hạt nổ bay tỏa
-    const now = Date.now();
     particlesRef.current = particlesRef.current.filter(p => {
       const elapsed = now - p.startTime;
       if (elapsed >= p.duration) return false;
@@ -339,6 +355,57 @@ export default function OverloadGame({ onHome }) {
       return true;
     });
 
+    // 3. Cập nhật và vẽ chữ Combo nổi
+    floatingTextsRef.current = floatingTextsRef.current.filter(t => {
+      const elapsed = now - t.startTime;
+      if (elapsed >= t.duration) return false;
+      const pct = elapsed / t.duration;
+      
+      const currentY = t.y - pct * 60; // Bay lên trên 60px
+      const alpha = 1 - pct; // Mờ dần
+      const scale = 1 + pct * 0.4; // To dần lên
+      
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = `bold ${Math.floor(22 * scale)}px 'Outfit', sans-serif`;
+      ctx.fillStyle = t.color;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = t.color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(t.text, t.x, currentY);
+      ctx.restore();
+      return true;
+    });
+
+    // 4. Vẽ sóng xung kích (Shockwaves)
+    shockwavesRef.current = shockwavesRef.current.filter(sw => {
+      const elapsed = now - sw.startTime;
+      if (elapsed >= sw.duration) return false;
+      const pct = elapsed / sw.duration;
+      
+      const currentRadius = sw.maxRadius * pct;
+      const alpha = 1 - pct;
+      
+      ctx.save();
+      ctx.strokeStyle = sw.color;
+      ctx.lineWidth = 6 * (1 - pct);
+      ctx.globalAlpha = alpha;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = sw.color;
+      
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, currentRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, currentRadius * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      ctx.restore();
+      return true;
+    });
+
     ctx.globalAlpha = 1.0;
     ctx.shadowBlur = 0;
 
@@ -348,7 +415,7 @@ export default function OverloadGame({ onHome }) {
   useEffect(() => {
     requestRef.current = requestAnimationFrame(updateAndDrawCanvas);
     return () => cancelAnimationFrame(requestRef.current);
-  }, [cellSize, currentPath]);
+  }, [cellSize]);
 
   const spawnExplosion = (p1, p2, type) => {
     let color = '#ff9f00'; // Mặc định vàng cam
@@ -388,7 +455,7 @@ export default function OverloadGame({ onHome }) {
   };
 
   const handleCellClick = (r, c) => {
-    if (isPaused || currentPath || gameState.matrix.length === 0 || gameState.matrix[r][c] === 0) return;
+    if (isPaused || gameState.matrix.length === 0 || gameState.matrix[r][c] === 0) return;
 
     pikachuAudio.playSound('click');
 
@@ -400,10 +467,12 @@ export default function OverloadGame({ onHome }) {
         return;
       }
 
-      const path = getConnectionPath(gameState.matrix, row, col, selectedCell, { r, c });
+      const p1 = selectedCell;
+      const p2 = { r, c };
+      const path = getConnectionPath(gameState.matrix, row, col, p1, p2);
       if (path.length > 0) {
-        const type1 = gameState.specialType[selectedCell.r][selectedCell.c];
-        const type2 = gameState.specialType[r][c];
+        const type1 = gameState.specialType[p1.r][p1.c];
+        const type2 = gameState.specialType[p2.r][p2.c];
         const activeType = type1 !== 0 ? type1 : type2;
 
         if (activeType === 1) { // Energy Tile
@@ -418,111 +487,124 @@ export default function OverloadGame({ onHome }) {
           pikachuAudio.playSound('match');
         }
 
-        setCurrentPath(path);
-        spawnExplosion(selectedCell, { r, c }, activeType);
-        
+        // Lưu đường đi laser để vẽ
+        activePathsRef.current.push({
+          id: Math.random(),
+          path,
+          startTime: Date.now()
+        });
+
+        spawnExplosion(p1, p2, activeType);
         setSelectedCell(null);
 
-        const p1 = selectedCell;
-        const p2 = { r, c };
+        setGameState(prev => {
+          const nextMatrix = prev.matrix.map(rArr => [...rArr]);
+          const nextSpecial = prev.specialType.map(rArr => [...rArr]);
+          const nextSpawnTime = prev.spawnTime.map(rArr => [...rArr]);
 
-        setTimeout(() => {
-          setGameState(prev => {
-            const nextMatrix = prev.matrix.map(rArr => [...rArr]);
-            const nextSpecial = prev.specialType.map(rArr => [...rArr]);
-            const nextSpawnTime = prev.spawnTime.map(rArr => [...rArr]);
+          const t1 = nextSpecial[p1.r][p1.c];
+          const t2 = nextSpecial[p2.r][p2.c];
 
-            const t1 = nextSpecial[p1.r][p1.c];
-            const t2 = nextSpecial[p2.r][p2.c];
+          // Xóa hai ô cờ
+          nextMatrix[p1.r][p1.c] = 0;
+          nextMatrix[p2.r][p2.c] = 0;
+          nextSpecial[p1.r][p1.c] = 0;
+          nextSpecial[p2.r][p2.c] = 0;
 
-            // Xóa hai ô cờ
-            nextMatrix[p1.r][p1.c] = 0;
-            nextMatrix[p2.r][p2.c] = 0;
-            nextSpecial[p1.r][p1.c] = 0;
-            nextSpecial[p2.r][p2.c] = 0;
+          const now = Date.now();
+          let nextCombo = 1;
+          if (now - lastMatchTime.current <= 3000) {
+            nextCombo = prev.comboCount + 1;
+          }
+          lastMatchTime.current = now;
 
-            const now = Date.now();
-            let nextCombo = 1;
-            if (now - lastMatchTime.current <= 3000) {
-              nextCombo = prev.comboCount + 1;
+          if (nextCombo > 1) {
+            const midX = (p1.c * (cellSize + GAP) + cellSize / 2 + p2.c * (cellSize + GAP) + cellSize / 2) / 2;
+            const midY = (p1.r * (cellSize + GAP) + cellSize / 2 + p2.r * (cellSize + GAP) + cellSize / 2) / 2;
+            const info = getComboText(nextCombo);
+            floatingTextsRef.current.push({
+              id: Math.random(),
+              x: midX,
+              y: midY,
+              text: info.text,
+              color: info.color,
+              startTime: now,
+              duration: 1000
+            });
+          }
+
+          // Tính điểm
+          let baseScore = 10;
+          let distance = 0;
+          for (let i = 0; i < path.length - 1; i++) {
+            distance += Math.abs(path[i].r - path[i+1].r) + Math.abs(path[i].c - path[i+1].c);
+          }
+          if (distance > 4) {
+            baseScore += 10;
+          }
+
+          const multiplier = Math.min(5, nextCombo);
+          let matchScore = baseScore * multiplier;
+
+          let pressureRecovery = 3;
+          if (distance > 4) pressureRecovery = 5;
+          if (nextCombo > 1) pressureRecovery = 8;
+
+          // Energy Tile
+          if (t1 === 1 || t2 === 1) {
+            pressureRecovery = 15;
+            matchScore += 30;
+            const cleansed = cleanseUnstableTiles(nextMatrix, nextSpecial, nextSpawnTime, row, col);
+            if (cleansed > 0) {
+              pikachuAudio.playSound('win');
             }
-            lastMatchTime.current = now;
+          }
 
-            // Tính điểm
-            let baseScore = 10;
-            let distance = 0;
-            for (let i = 0; i < path.length - 1; i++) {
-              distance += Math.abs(path[i].r - path[i+1].r) + Math.abs(path[i].c - path[i+1].c);
+          // Freeze Tile
+          let newFreeze = prev.freezeTime;
+          if (t1 === 3 || t2 === 3) {
+            newFreeze = 5;
+          }
+
+          // Corrupted Tile
+          if (t1 === 4 || t2 === 4) {
+            pressureRecovery = -15;
+            matchScore -= 15;
+          }
+
+          // Bomb Tile
+          if (t1 === 2) triggerBomb(nextMatrix, nextSpecial, nextSpawnTime, p1.r, p1.c, val => matchScore += val);
+          if (t2 === 2) triggerBomb(nextMatrix, nextSpecial, nextSpawnTime, p2.r, p2.c, val => matchScore += val);
+
+          const nextPressure = newFreeze > 0 ? prev.pressure : Math.min(100, prev.pressure + pressureRecovery);
+
+          // Kiểm tra số cờ còn lại
+          let remaining = 0;
+          for (let rowIdx = 1; rowIdx < row - 1; rowIdx++) {
+            for (let colIdx = 1; colIdx < col - 1; colIdx++) {
+              if (nextMatrix[rowIdx][colIdx] !== 0) remaining++;
             }
-            if (distance > 4) {
-              baseScore += 10;
-            }
+          }
 
-            const multiplier = Math.min(5, nextCombo);
-            let matchScore = baseScore * multiplier;
+          let nextNextWaveTime = prev.nextWaveTime;
+          if (remaining === 0) {
+            nextNextWaveTime = 1;
+          } else if (!hasAvailableMoves(nextMatrix, row, col)) {
+            shuffleMatrix(nextMatrix, row, col);
+          }
 
-            let pressureRecovery = 3;
-            if (distance > 4) pressureRecovery = 5;
-            if (nextCombo > 1) pressureRecovery = 8;
-
-            // Energy Tile
-            if (t1 === 1 || t2 === 1) {
-              pressureRecovery = 15;
-              matchScore += 30;
-              const cleansed = cleanseUnstableTiles(nextMatrix, nextSpecial, nextSpawnTime, row, col);
-              if (cleansed > 0) {
-                pikachuAudio.playSound('win');
-              }
-            }
-
-            // Freeze Tile
-            let newFreeze = prev.freezeTime;
-            if (t1 === 3 || t2 === 3) {
-              newFreeze = 5;
-            }
-
-            // Corrupted Tile
-            if (t1 === 4 || t2 === 4) {
-              pressureRecovery = -15;
-              matchScore -= 15;
-            }
-
-            // Bomb Tile
-            if (t1 === 2) triggerBomb(nextMatrix, nextSpecial, nextSpawnTime, p1.r, p1.c, val => matchScore += val);
-            if (t2 === 2) triggerBomb(nextMatrix, nextSpecial, nextSpawnTime, p2.r, p2.c, val => matchScore += val);
-
-            const nextPressure = newFreeze > 0 ? prev.pressure : Math.min(100, prev.pressure + pressureRecovery);
-
-            // Kiểm tra số cờ còn lại
-            let remaining = 0;
-            for (let rowIdx = 1; rowIdx < row - 1; rowIdx++) {
-              for (let colIdx = 1; colIdx < col - 1; colIdx++) {
-                if (nextMatrix[rowIdx][colIdx] !== 0) remaining++;
-              }
-            }
-
-            let nextNextWaveTime = prev.nextWaveTime;
-            if (remaining === 0) {
-              nextNextWaveTime = 1;
-            } else if (!hasAvailableMoves(nextMatrix, row, col)) {
-              shuffleMatrix(nextMatrix, row, col);
-            }
-
-            return {
-              ...prev,
-              matrix: nextMatrix,
-              specialType: nextSpecial,
-              spawnTime: nextSpawnTime,
-              score: prev.score + matchScore,
-              pressure: nextPressure,
-              freezeTime: newFreeze,
-              nextWaveTime: nextNextWaveTime,
-              comboCount: nextCombo
-            };
-          });
-
-          setCurrentPath(null);
-        }, 480);
+          return {
+            ...prev,
+            matrix: nextMatrix,
+            specialType: nextSpecial,
+            spawnTime: nextSpawnTime,
+            score: prev.score + matchScore,
+            pressure: nextPressure,
+            freezeTime: newFreeze,
+            nextWaveTime: nextNextWaveTime,
+            comboCount: nextCombo
+          };
+        });
       } else {
         pikachuAudio.playSound('wrong');
         setSelectedCell(null);
@@ -538,6 +620,18 @@ export default function OverloadGame({ onHome }) {
     pikachuAudio.playSound('bomb'); // Phát tiếng nổ bom
     setShakeClass('shake-board');
     setTimeout(() => setShakeClass(''), 400); // Tắt hiệu ứng rung lắc sau 400ms
+
+    const x = c * (cellSize + GAP) + cellSize / 2;
+    const y = r * (cellSize + GAP) + cellSize / 2;
+    shockwavesRef.current.push({
+      id: Math.random(),
+      x,
+      y,
+      maxRadius: cellSize * 2.5,
+      color: '#ff1744',
+      startTime: Date.now(),
+      duration: 500
+    });
 
     let bombScore = 0;
     const rStart = Math.max(1, r - 1);
@@ -581,21 +675,7 @@ export default function OverloadGame({ onHome }) {
     addScore(bombScore);
   };
 
-  const handleShuffle = () => {
-    if (isPaused || gameState.remainingShuffles <= 0) return;
-    pikachuAudio.playSound('match');
 
-    setGameState(prev => {
-      const nextMatrix = prev.matrix.map(rArr => [...rArr]);
-      shuffleMatrix(nextMatrix, row, col);
-      return {
-        ...prev,
-        matrix: nextMatrix,
-        remainingShuffles: prev.remainingShuffles - 1
-      };
-    });
-    setSelectedCell(null);
-  };
 
   const handleMute = () => {
     const muted = pikachuAudio.toggleMute();
@@ -644,7 +724,7 @@ export default function OverloadGame({ onHome }) {
   const emptyCount = getEmptyCellsCount(gameState.matrix, row, col);
   const waveDisplay = emptyCount < 24 ? 'ĐẦY' : `${gameState.nextWaveTime}s`;
 
-  const pressureStatus = gameState.pressure <= 20 ? 'danger' : gameState.pressure <= 50 ? 'warning' : 'normal';
+  const pressureStatus = gameState.pressure < 25 ? 'danger' : gameState.pressure <= 50 ? 'warning' : 'normal';
 
   const boardWidth = col * (cellSize + GAP) - GAP;
   const boardHeight = row * (cellSize + GAP) - GAP;
@@ -665,6 +745,9 @@ export default function OverloadGame({ onHome }) {
         }}
       >
         <div style={{ position: 'relative', width: boardWidth, height: boardHeight }}>
+          {pressureStatus === 'danger' && (
+            <div className="vignette-danger" />
+          )}
           <div 
             className="board-grid" 
             style={{ 
@@ -747,18 +830,7 @@ export default function OverloadGame({ onHome }) {
               </>
             )}
 
-            <div className="hud-label">Trợ giúp:</div>
-            <div className="hud-val hud-shuffles">Đổi hình ({gameState.remainingShuffles})</div>
           </div>
-
-          <button 
-            className="sidebar-btn btn-sidebar-shuffle" 
-            onClick={handleShuffle}
-            disabled={isPaused || gameState.remainingShuffles <= 0}
-            style={{ opacity: gameState.remainingShuffles <= 0 ? 0.5 : 1 }}
-          >
-            ĐỔI HÌNH
-          </button>
           
           <button 
             className={`sidebar-btn btn-sidebar-mute ${isMuted ? 'muted' : ''}`} 

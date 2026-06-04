@@ -20,7 +20,6 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
   const [remainingShuffles, setRemainingShuffles] = useState(shuffles);
   const [timeLeft, setTimeLeft] = useState(maxTime);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentPath, setCurrentPath] = useState(null); // [{r,c}]
   const [isMuted, setIsMuted] = useState(pikachuAudio.isMuted());
   const [elapsedTime, setElapsedTime] = useState(0);
   const [cellSize, setCellSize] = useState(50);
@@ -34,6 +33,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
   const canvasRef = useRef(null);
   const requestRef = useRef(null);
   const particlesRef = useRef([]);
+  const activePathsRef = useRef([]);
 
   const startTimestamp = useRef(Date.now());
   const pauseDuration = useRef(0);
@@ -66,7 +66,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
     setTimeLeft(maxTime);
     setElapsedTime(0);
     setSelectedCell(null);
-    setCurrentPath(null);
+    activePathsRef.current = [];
     setIsPaused(false);
     setShowWinModal(false);
     setShowLoseModal(false);
@@ -111,16 +111,24 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 1. Vẽ đường nối Laser nếu có
-    if (currentPath && currentPath.length >= 2) {
+    const now = Date.now();
+    activePathsRef.current = activePathsRef.current.filter(p => now - p.startTime < 480);
+    
+    activePathsRef.current.forEach(p => {
+      const elapsed = now - p.startTime;
+      const alpha = 1 - elapsed / 480;
+      
+      ctx.save();
       ctx.strokeStyle = '#ff3d00';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.shadowBlur = 10;
       ctx.shadowColor = '#ff3d00';
+      ctx.globalAlpha = alpha;
 
       ctx.beginPath();
-      currentPath.forEach((pt, idx) => {
+      p.path.forEach((pt, idx) => {
         const x = pt.c * (cellSize + GAP) + cellSize / 2;
         const y = pt.r * (cellSize + GAP) + cellSize / 2;
         if (idx === 0) ctx.moveTo(x, y);
@@ -131,18 +139,17 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
       ctx.fillStyle = '#ffdc00';
       ctx.shadowColor = '#ffdc00';
       ctx.shadowBlur = 8;
-      currentPath.forEach(pt => {
+      p.path.forEach(pt => {
         const x = pt.c * (cellSize + GAP) + cellSize / 2;
         const y = pt.r * (cellSize + GAP) + cellSize / 2;
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, Math.PI * 2);
         ctx.fill();
       });
-      ctx.shadowBlur = 0;
-    }
+      ctx.restore();
+    });
 
     // 2. Cập nhật và vẽ các hạt phát sáng (Particles)
-    const now = Date.now();
     particlesRef.current = particlesRef.current.filter(p => {
       const elapsed = now - p.startTime;
       if (elapsed >= p.duration) return false;
@@ -172,7 +179,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
   useEffect(() => {
     requestRef.current = requestAnimationFrame(updateAndDrawCanvas);
     return () => cancelAnimationFrame(requestRef.current);
-  }, [cellSize, currentPath]);
+  }, [cellSize]);
 
   const spawnExplosion = (p1, p2) => {
     const getCenter = (pt) => ({
@@ -222,7 +229,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
   const { matrix } = gameState;
 
   const handleCellClick = (r, c) => {
-    if (isPaused || matrix[r][c] === 0 || currentPath) return;
+    if (isPaused || matrix[r][c] === 0) return;
 
     pikachuAudio.playSound('click');
 
@@ -234,40 +241,47 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
         return;
       }
 
-      const path = getConnectionPath(matrix, row, col, selectedCell, { r, c });
+      const p1 = selectedCell;
+      const p2 = { r, c };
+      const path = getConnectionPath(matrix, row, col, p1, p2);
       if (path.length > 0) {
         pikachuAudio.playSound('match');
-        setCurrentPath(path);
-        spawnExplosion(selectedCell, { r, c });
+        
+        // Lưu đường đi laser để vẽ
+        activePathsRef.current.push({
+          id: Math.random(),
+          path,
+          startTime: Date.now()
+        });
+
+        spawnExplosion(p1, p2);
         setSelectedCell(null);
 
-        setTimeout(() => {
-          const newMatrix = matrix.map(rowArr => [...rowArr]);
-          newMatrix[selectedCell.r][selectedCell.c] = 0;
-          newMatrix[r][c] = 0;
+        // Xóa cờ và cộng điểm ngay lập tức
+        const newMatrix = matrix.map(rowArr => [...rowArr]);
+        newMatrix[p1.r][p1.c] = 0;
+        newMatrix[p2.r][p2.c] = 0;
 
-          setScore(prev => prev + 10);
-          setCurrentPath(null);
+        setScore(prev => prev + 10);
 
-          let newRemaining = 0;
-          for (let rowIdx = 1; rowIdx < row - 1; rowIdx++) {
-            for (let colIdx = 1; colIdx < col - 1; colIdx++) {
-              if (newMatrix[rowIdx][colIdx] !== 0) newRemaining++;
-            }
+        let newRemaining = 0;
+        for (let rowIdx = 1; rowIdx < row - 1; rowIdx++) {
+          for (let colIdx = 1; colIdx < col - 1; colIdx++) {
+            if (newMatrix[rowIdx][colIdx] !== 0) newRemaining++;
           }
+        }
 
-          if (newRemaining === 0) {
-            setGameState({ matrix: newMatrix });
-            pikachuAudio.playSound('win');
-            togglePause(true);
-            setShowWinModal(true);
-          } else {
-            if (!hasAvailableMoves(newMatrix, row, col)) {
-              shuffleMatrix(newMatrix, row, col);
-            }
-            setGameState({ matrix: newMatrix });
+        if (newRemaining === 0) {
+          setGameState({ matrix: newMatrix });
+          pikachuAudio.playSound('win');
+          togglePause(true);
+          setShowWinModal(true);
+        } else {
+          if (!hasAvailableMoves(newMatrix, row, col)) {
+            shuffleMatrix(newMatrix, row, col);
           }
-        }, 480);
+          setGameState({ matrix: newMatrix });
+        }
       } else {
         pikachuAudio.playSound('wrong');
         setSelectedCell(null);
@@ -300,7 +314,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
     setTimeLeft(maxTime);
     setElapsedTime(0);
     setSelectedCell(null);
-    setCurrentPath(null);
+    activePathsRef.current = [];
     particlesRef.current = [];
     togglePause(false);
     setShowWinModal(false);

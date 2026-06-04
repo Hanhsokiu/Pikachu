@@ -441,8 +441,13 @@ body {
 .progress-bar-fill.danger {
   background: linear-gradient(90deg, #ff1744 0%, #ff8a80 50%, #ff1744 100%);
   background-size: 200% 100%;
-  animation: wave-bar 1.5s linear infinite;
-  box-shadow: 0 0 8px rgba(255, 23, 68, 0.6);
+  animation: wave-bar 1.5s linear infinite, danger-blink 0.6s ease-in-out infinite alternate;
+  box-shadow: 0 0 12px rgba(255, 23, 68, 0.9);
+}
+
+@keyframes danger-blink {
+  0% { opacity: 0.6; filter: brightness(0.9); }
+  100% { opacity: 1; filter: brightness(1.3); }
 }
 
 @keyframes wave-bar {
@@ -536,4 +541,27 @@ body {
 @keyframes fade-in {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Red Vignette Danger Alert for Overload Mode */
+.vignette-danger {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 50px rgba(255, 23, 68, 0.5);
+  animation: vignette-pulse 1s ease-in-out infinite alternate;
+  z-index: 10;
+  border-radius: 12px;
+}
+
+@keyframes vignette-pulse {
+  0% {
+    box-shadow: inset 0 0 30px rgba(255, 23, 68, 0.35);
+  }
+  100% {
+    box-shadow: inset 0 0 70px rgba(255, 23, 68, 0.75);
+  }
 }
