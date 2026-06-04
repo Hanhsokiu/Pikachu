@@ -10,6 +10,28 @@ export default function App() {
   const [screen, setScreen] = useState('HOME'); // HOME, DIFFICULTY, GAME_CLASSIC, GAME_OVERLOAD, RANK, INSTRUCTIONS
   const [classicParams, setClassicParams] = useState(null);
 
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [isMuted, setIsMuted] = useState(pikachuAudio.isMuted());
+  const [bgmVol, setBgmVol] = useState(Math.round(pikachuAudio.getBGMVolume() * 100));
+  const [sfxVol, setSfxVol] = useState(Math.round(pikachuAudio.getSFXVolume() * 100));
+
+  const handleBgmChange = (e) => {
+    const val = parseFloat(e.target.value) / 100;
+    setBgmVol(e.target.value);
+    pikachuAudio.setBGMVolume(val);
+  };
+
+  const handleSfxChange = (e) => {
+    const val = parseFloat(e.target.value) / 100;
+    setSfxVol(e.target.value);
+    pikachuAudio.setSFXVolume(val);
+  };
+
+  const handleToggleMute = () => {
+    const muted = pikachuAudio.toggleMute();
+    setIsMuted(muted);
+  };
+
   // Khởi động nhạc nền khi có tương tác đầu tiên từ người dùng
   useEffect(() => {
     const handleFirstInteraction = () => {
@@ -59,6 +81,12 @@ export default function App() {
           <button className="menu-btn btn-guide" onClick={() => handleNavigate('INSTRUCTIONS')}>
             HƯỚNG DẪN
           </button>
+          <button className="menu-btn btn-settings" onClick={() => {
+            pikachuAudio.playSound('click');
+            setShowSettingsModal(true);
+          }} style={{ backgroundColor: '#2d3748' }}>
+            CÀI ĐẶT
+          </button>
           <button className="menu-btn btn-exit" onClick={() => {
             pikachuAudio.playSound('click');
             if (window.confirm("Thoát trò chơi?")) {
@@ -67,6 +95,72 @@ export default function App() {
           }}>
             THOÁT GAME
           </button>
+        </div>
+      )}
+
+      {showSettingsModal && (
+        <div className="settings-modal-overlay">
+          <div className="settings-modal">
+            <h3 className="settings-title">CÀI ĐẶT</h3>
+            
+            <div className="settings-mute-row">
+              <span className="settings-mute-label">Tắt âm toàn bộ</span>
+              <label className="switch">
+                <input 
+                  type="checkbox" 
+                  checked={isMuted} 
+                  onChange={handleToggleMute} 
+                />
+                <span className="slider-toggle"></span>
+              </label>
+            </div>
+
+            <div className="settings-group">
+              <label className="settings-label">
+                <span>Nhạc nền (BGM)</span>
+                <span>{isMuted ? 'Tắt' : `${bgmVol}%`}</span>
+              </label>
+              <div className="settings-slider-container">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={bgmVol} 
+                  onChange={handleBgmChange} 
+                  className="settings-slider"
+                  disabled={isMuted}
+                />
+              </div>
+            </div>
+
+            <div className="settings-group">
+              <label className="settings-label">
+                <span>Hiệu ứng (SFX)</span>
+                <span>{isMuted ? 'Tắt' : `${sfxVol}%`}</span>
+              </label>
+              <div className="settings-slider-container">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={sfxVol} 
+                  onChange={handleSfxChange} 
+                  className="settings-slider"
+                  disabled={isMuted}
+                />
+              </div>
+            </div>
+
+            <button 
+              className="btn-settings-close" 
+              onClick={() => {
+                pikachuAudio.playSound('click');
+                setShowSettingsModal(false);
+              }}
+            >
+              ĐỒNG Ý
+            </button>
+          </div>
         </div>
       )}
 

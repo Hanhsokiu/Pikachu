@@ -21,6 +21,28 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
   const [timeLeft, setTimeLeft] = useState(maxTime);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(pikachuAudio.isMuted());
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [shuffleKey, setShuffleKey] = useState(0);
+  const [bgmVol, setBgmVol] = useState(Math.round(pikachuAudio.getBGMVolume() * 100));
+  const [sfxVol, setSfxVol] = useState(Math.round(pikachuAudio.getSFXVolume() * 100));
+
+  const handleBgmChange = (e) => {
+    const val = parseFloat(e.target.value) / 100;
+    setBgmVol(e.target.value);
+    pikachuAudio.setBGMVolume(val);
+  };
+
+  const handleSfxChange = (e) => {
+    const val = parseFloat(e.target.value) / 100;
+    setSfxVol(e.target.value);
+    pikachuAudio.setSFXVolume(val);
+  };
+
+  const handleToggleMute = () => {
+    const muted = pikachuAudio.toggleMute();
+    setIsMuted(muted);
+  };
+
   const [elapsedTime, setElapsedTime] = useState(0);
   const [cellSize, setCellSize] = useState(50);
 
@@ -72,6 +94,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
     setShowLoseModal(false);
     setPlayerName('');
     setNameError('');
+    setShuffleKey(prev => prev + 1);
     particlesRef.current = [];
     startTimestamp.current = Date.now();
     pauseDuration.current = 0;
@@ -176,10 +199,13 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
     requestRef.current = requestAnimationFrame(updateAndDrawCanvas);
   };
 
+  const isGameStateNull = gameState === null;
   useEffect(() => {
+    if (!gameState) return;
     requestRef.current = requestAnimationFrame(updateAndDrawCanvas);
     return () => cancelAnimationFrame(requestRef.current);
-  }, [cellSize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cellSize, isGameStateNull]);
 
   const spawnExplosion = (p1, p2) => {
     const getCenter = (pt) => ({
@@ -299,12 +325,10 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
     setGameState({ matrix: newMatrix });
     setRemainingShuffles(prev => prev - 1);
     setSelectedCell(null);
+    setShuffleKey(prev => prev + 1);
   };
 
-  const handleMute = () => {
-    const muted = pikachuAudio.toggleMute();
-    setIsMuted(muted);
-  };
+
 
   const handleReplay = () => {
     const fresh = createMatrix(row, col, difficulty);
@@ -321,6 +345,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
     setShowLoseModal(false);
     setPlayerName('');
     setNameError('');
+    setShuffleKey(prev => prev + 1);
     startTimestamp.current = Date.now();
     pauseDuration.current = 0;
   };
@@ -377,6 +402,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
       >
         <div style={{ position: 'relative', width: boardWidth, height: boardHeight }}>
           <div 
+            key={shuffleKey}
             className="board-grid" 
             style={{ 
               gridTemplateRows: `repeat(${row}, ${cellSize}px)`, 
@@ -395,6 +421,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
                     key={`${r}-${c}`}
                     className={`cell-btn ${isSelected ? 'selected' : ''}`}
                     onClick={() => handleCellClick(r, c)}
+                    style={{ animationDelay: `${(r + c) * 15}ms` }}
                   >
                     <img src={`/icon/${val}.png`} alt={`Icon ${val}`} />
                   </button>
@@ -457,11 +484,11 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
             ĐỔI HÌNH
           </button>
           
-          <button 
-            className={`sidebar-btn btn-sidebar-mute ${isMuted ? 'muted' : ''}`} 
-            onClick={handleMute}
-          >
-            {isMuted ? 'ÂM THANH: TẮT' : 'ÂM THANH: BẬT'}
+          <button className="sidebar-btn btn-sidebar-settings" onClick={() => {
+            pikachuAudio.playSound('click');
+            setShowSettingsModal(true);
+          }} style={{ backgroundColor: '#4a5568' }}>
+            CÀI ĐẶT
           </button>
 
           <button className="sidebar-btn btn-sidebar-new" onClick={handleReplay}>
@@ -475,6 +502,72 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
           <img src="/icon/pikachu.png" alt="Pikachu Logo" className="sidebar-logo" />
         </div>
       </div>
+
+      {showSettingsModal && (
+        <div className="settings-modal-overlay">
+          <div className="settings-modal">
+            <h3 className="settings-title">CÀI ĐẶT</h3>
+            
+            <div className="settings-mute-row">
+              <span className="settings-mute-label">Tắt âm toàn bộ</span>
+              <label className="switch">
+                <input 
+                  type="checkbox" 
+                  checked={isMuted} 
+                  onChange={handleToggleMute} 
+                />
+                <span className="slider-toggle"></span>
+              </label>
+            </div>
+
+            <div className="settings-group">
+              <label className="settings-label">
+                <span>Nhạc nền (BGM)</span>
+                <span>{isMuted ? 'Tắt' : `${bgmVol}%`}</span>
+              </label>
+              <div className="settings-slider-container">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={bgmVol} 
+                  onChange={handleBgmChange} 
+                  className="settings-slider"
+                  disabled={isMuted}
+                />
+              </div>
+            </div>
+
+            <div className="settings-group">
+              <label className="settings-label">
+                <span>Hiệu ứng (SFX)</span>
+                <span>{isMuted ? 'Tắt' : `${sfxVol}%`}</span>
+              </label>
+              <div className="settings-slider-container">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={sfxVol} 
+                  onChange={handleSfxChange} 
+                  className="settings-slider"
+                  disabled={isMuted}
+                />
+              </div>
+            </div>
+
+            <button 
+              className="btn-settings-close" 
+              onClick={() => {
+                pikachuAudio.playSound('click');
+                setShowSettingsModal(false);
+              }}
+            >
+              ĐỒNG Ý
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CUSTOM WIN MODAL */}
       {showWinModal && (
