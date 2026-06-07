@@ -5,12 +5,14 @@ import Instructions from './components/Instructions';
 import Leaderboard from './components/Leaderboard';
 import ClassicGame from './components/ClassicGame';
 import OverloadGame from './components/OverloadGame';
+import AuthModal from './components/AuthModal';
 
 export default function App() {
   const [screen, setScreen] = useState('HOME'); // HOME, DIFFICULTY, GAME_CLASSIC, GAME_OVERLOAD, RANK, INSTRUCTIONS
   const [classicParams, setClassicParams] = useState(null);
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [isMuted, setIsMuted] = useState(pikachuAudio.isMuted());
   const [bgmVol, setBgmVol] = useState(Math.round(pikachuAudio.getBGMVolume() * 100));
   const [sfxVol, setSfxVol] = useState(Math.round(pikachuAudio.getSFXVolume() * 100));
@@ -87,6 +89,12 @@ export default function App() {
           }} style={{ backgroundColor: '#2d3748' }}>
             CÀI ĐẶT
           </button>
+          <button className="menu-btn" onClick={() => {
+            pikachuAudio.playSound('click');
+            setShowAuthModal(true);
+          }} style={{ backgroundColor: '#1a3a4a', border: '1px solid rgba(0,229,255,0.3)' }}>
+            🏆 TÀI KHOẢN & THÀNH TỰU
+          </button>
           <button className="menu-btn btn-exit" onClick={() => {
             pikachuAudio.playSound('click');
             if (window.confirm("Thoát trò chơi?")) {
@@ -96,6 +104,10 @@ export default function App() {
             THOÁT GAME
           </button>
         </div>
+      )}
+
+      {showAuthModal && (
+        <AuthModal onClose={() => setShowAuthModal(false)} />
       )}
 
       {showSettingsModal && (

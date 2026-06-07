@@ -780,3 +780,308 @@ input:checked + .slider-toggle:before {
   transform: translateX(20px);
 }
 
+/* HUD Item flex layout */
+.hud-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+}
+
+.sidebar-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Authentication & Achievements Modal */
+.auth-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.auth-modal {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 30px;
+  width: 400px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.auth-title {
+  font-size: 20px;
+  color: var(--accent-gold);
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.auth-tab-btn {
+  flex: 1;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.auth-tab-btn.active {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: var(--accent-cyan);
+  color: #fff;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #fff;
+  margin-bottom: 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.auth-input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.3);
+}
+
+.auth-error {
+  color: var(--accent-red);
+  font-size: 12px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.auth-info-text {
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 15px;
+  color: #fff;
+}
+
+.auth-btn-primary {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #00b0ff 0%, #00e5ff 100%);
+  border: none;
+  border-radius: 8px;
+  color: #0f141d;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+}
+
+.auth-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.6);
+}
+
+.achievement-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 15px;
+  padding-right: 5px;
+}
+
+.achievement-item {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 12px;
+}
+
+.achievement-item.unlocked {
+  border-color: rgba(0, 229, 255, 0.3);
+  background: rgba(0, 229, 255, 0.04);
+}
+
+.achievement-icon {
+  font-size: 22px;
+  filter: grayscale(1);
+}
+
+.achievement-item.unlocked .achievement-icon {
+  filter: none;
+}
+
+.achievement-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.achievement-name {
+  font-weight: bold;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.achievement-item.unlocked .achievement-name {
+  color: #fff;
+}
+
+.achievement-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+/* RESPONSIVE LAYOUT FOR MOBILE */
+@media (max-width: 768px) {
+  body {
+    overflow: hidden;
+  }
+
+  .app-container {
+    width: 100vw;
+    height: 100vh;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* Home Screen layout adjustment */
+  .home-screen, .difficulty-screen {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+    padding: 20px;
+    justify-content: center;
+  }
+
+  /* Game play main screens */
+  .game-screen {
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .board-wrapper {
+    flex: 1;
+    width: 100% !important;
+    height: auto !important;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  /* Sidebar transforms to a Bottom Control Bar */
+  .sidebar {
+    width: 100% !important;
+    border-left: none;
+    border-top: 2px solid #303a4e;
+    flex-direction: column;
+    height: auto;
+    background-color: #161b26;
+  }
+
+  .sidebar-title {
+    display: none; /* Hide top title bar */
+  }
+
+  .sidebar-content {
+    padding: 10px 15px;
+    gap: 10px;
+    flex-direction: column;
+  }
+
+  /* HUD displays horizontally */
+  .hud-grid {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 0;
+    gap: 10px;
+  }
+
+  .hud-item {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .hud-score {
+    font-size: 20px;
+  }
+
+  .hud-time-container {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .progress-bar-bg {
+    width: 75px;
+    height: 10px;
+  }
+
+  /* Group buttons into 2x2 grid or row wrap */
+  .sidebar-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .sidebar-btn {
+    flex: 1 1 45%;
+    margin-bottom: 0;
+    height: 36px;
+    font-size: 13px;
+    padding: 0 5px;
+  }
+
+  .sidebar-logo {
+    display: none;
+  }
+
+  /* Modals responsiveness */
+  .settings-modal, .auth-modal {
+    width: 90% !important;
+    padding: 20px 15px;
+  }
+}
+

@@ -12,7 +12,8 @@ import {
   getEmptyCellsCount
 } from '../utils/pikachuEngine';
 import { pikachuAudio } from '../utils/pikachuAudio';
-import { addLeaderboardEntry, leaderboardNameExists } from './Leaderboard';
+import { addLeaderboardEntry, leaderboardNameExists } from '../utils/leaderboardUtils';
+import { isOnline, addOnlineScore, unlockAchievement } from '../utils/supabaseClient';
 
 const GAP = 2;
 
@@ -69,6 +70,13 @@ export default function OverloadGame({ onHome }) {
 
   const [cellSize, setCellSize] = useState(50);
   const [shakeClass, setShakeClass] = useState(''); // Thêm class rung lắc màn hình
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Dialogs
   const [showLoseModal, setShowLoseModal] = useState(false);
@@ -520,6 +528,15 @@ export default function OverloadGame({ onHome }) {
           startTime: Date.now()
         });
 
+        const comboCheckTime = Date.now();
+        let currentComboCheck = 1;
+        if (comboCheckTime - lastMatchTime.current <= 3000) {
+          currentComboCheck = gameState.comboCount + 1;
+        }
+        if (currentComboCheck >= 5) {
+          unlockAchievement('combo_5');
+        }
+
         spawnExplosion(p1, p2, activeType);
         setSelectedCell(null);
 
@@ -616,6 +633,7 @@ export default function OverloadGame({ onHome }) {
           let nextShuffleKey = prev.shuffleKey;
           if (remaining === 0) {
             nextNextWaveTime = 1;
+            unlockAchievement('cleanse_all');
           } else if (!hasAvailableMoves(nextMatrix, row, col)) {
             shuffleMatrix(nextMatrix, row, col);
             nextShuffleKey = Math.random();
@@ -725,6 +743,18 @@ export default function OverloadGame({ onHome }) {
     }
 
     addLeaderboardEntry('overload', name, gameState.score, gameState.survivalTime);
+
+    if (isOnline()) {
+      addOnlineScore(name, gameState.score, gameState.survivalTime, 'overload');
+    }
+
+    if (gameState.survivalTime >= 120) {
+      unlockAchievement('survive_120');
+    }
+    if (gameState.score >= 500) {
+      unlockAchievement('score_500');
+    }
+
     setShowLoseModal(false);
     onHome();
   };
@@ -755,14 +785,18 @@ export default function OverloadGame({ onHome }) {
   const boardWidth = col * (cellSize + GAP) - GAP;
   const boardHeight = row * (cellSize + GAP) - GAP;
 
+  const isMobile = windowWidth < 768;
+  const boardScale = isMobile ? Math.min(1, (windowWidth - 20) / boardWidth) : 1;
+  const wrapperHeight = boardHeight * boardScale;
+
   return (
     <div className="game-screen" style={{ '--cell-size': `${cellSize}px` }}>
       {/* Khu vực bàn cờ Overload */}
       <div 
         className={`board-wrapper ${shakeClass}`} 
         style={{ 
-          width: boardWidth + 40, 
-          height: boardHeight + 40,
+          width: isMobile ? '100%' : boardWidth + 40, 
+          height: isMobile ? wrapperHeight + 20 : boardHeight + 40,
           backgroundColor: gameState.freezeTime > 0 ? '#0f2430' : '#1a1f2a',
           transition: 'background-color 0.3s',
           display: 'flex',
@@ -770,7 +804,16 @@ export default function OverloadGame({ onHome }) {
           alignItems: 'center'
         }}
       >
-        <div style={{ position: 'relative', width: boardWidth, height: boardHeight }}>
+        <div 
+          style={{ 
+            position: 'relative', 
+            width: boardWidth, 
+            height: boardHeight,
+            transform: `scale(${boardScale})`,
+            transformOrigin: 'center center',
+            flexShrink: 0
+          }}
+        >
           {pressureStatus === 'danger' && (
             <div className="vignette-danger" />
           )}
@@ -832,53 +875,60 @@ export default function OverloadGame({ onHome }) {
         
         <div className="sidebar-content">
           <div className="hud-grid">
-            <div className="hud-label">Điểm số:</div>
-            <div className="hud-val hud-score">{gameState.score}</div>
+            <div className="hud-item">
+              <div className="hud-label">Điểm số:</div>
+              <div className="hud-val hud-score">{gameState.score}</div>
+            </div>
 
-            <div className="hud-label">Áp lực:</div>
-            <div className="hud-val hud-time-container">
-              <div className="progress-bar-bg">
-                <div 
-                  className={`progress-bar-fill ${pressureStatus}`} 
-                  style={{ width: `${gameState.pressure}%`, backgroundColor: gameState.freezeTime > 0 ? '#00e5ff' : '' }}
-                />
-              </div>
-              <div className="hud-time-text" style={{ color: gameState.freezeTime > 0 ? 'var(--accent-cyan)' : pressureStatus === 'danger' ? 'var(--accent-red)' : pressureStatus === 'warning' ? 'var(--accent-orange)' : 'var(--accent-green)' }}>
-                {gameState.freezeTime > 0 ? 'BĂNG' : `${gameState.pressure}%`}
+            <div className="hud-item">
+              <div className="hud-label">Áp lực:</div>
+              <div className="hud-val hud-time-container">
+                <div className="progress-bar-bg">
+                  <div 
+                    className={`progress-bar-fill ${pressureStatus}`} 
+                    style={{ width: `${gameState.pressure}%`, backgroundColor: gameState.freezeTime > 0 ? '#00e5ff' : '' }}
+                  />
+                </div>
+                <div className="hud-time-text" style={{ color: gameState.freezeTime > 0 ? 'var(--accent-cyan)' : pressureStatus === 'danger' ? 'var(--accent-red)' : pressureStatus === 'warning' ? 'var(--accent-orange)' : 'var(--accent-green)' }}>
+                  {gameState.freezeTime > 0 ? 'BĂNG' : `${gameState.pressure}%`}
+                </div>
               </div>
             </div>
 
-            <div className="hud-label">Kế tiếp:</div>
-            <div className="hud-val hud-next-wave">{waveDisplay}</div>
+            <div className="hud-item">
+              <div className="hud-label">Kế tiếp:</div>
+              <div className="hud-val hud-next-wave">{waveDisplay}</div>
+            </div>
 
-            <div className="hud-label">Sinh tồn:</div>
-            <div className="hud-val hud-survival">{formatHUDTime(gameState.survivalTime)}</div>
+            <div className="hud-item">
+              <div className="hud-label">Sinh tồn:</div>
+              <div className="hud-val hud-survival">{formatHUDTime(gameState.survivalTime)}</div>
+            </div>
 
             {gameState.comboCount > 0 && (
-              <>
+              <div className="hud-item">
                 <div className="hud-label">Combo:</div>
                 <div className="hud-val hud-combo">x{gameState.comboCount}</div>
-              </>
+              </div>
             )}
-
           </div>
           
-          <button className="sidebar-btn btn-sidebar-settings" onClick={() => {
-            pikachuAudio.playSound('click');
-            setShowSettingsModal(true);
-          }} style={{ backgroundColor: '#4a5568' }}>
-            CÀI ĐẶT
-          </button>
+          <div className="sidebar-buttons">
+            <button className="sidebar-btn btn-sidebar-settings" onClick={() => {
+              pikachuAudio.playSound('click');
+              setShowSettingsModal(true);
+            }} style={{ backgroundColor: '#4a5568' }}>
+              CÀI ĐẶT
+            </button>
 
-          <button className="sidebar-btn btn-sidebar-new" onClick={initGame}>
-            TRÒ CHƠI MỚI
-          </button>
+            <button className="sidebar-btn btn-sidebar-new" onClick={initGame}>
+              TRÒ CHƠI MỚI
+            </button>
 
-          <button className="sidebar-btn btn-sidebar-home" onClick={onHome}>
-            VỀ TRANG CHỦ
-          </button>
-
-          <img src="/icon/pikachu.png" alt="Pikachu Logo" className="sidebar-logo" />
+            <button className="sidebar-btn btn-sidebar-home" onClick={onHome}>
+              VỀ TRANG CHỦ
+            </button>
+          </div>
         </div>
       </div>
 

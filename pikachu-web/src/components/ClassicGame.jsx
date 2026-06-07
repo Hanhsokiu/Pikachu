@@ -6,7 +6,8 @@ import {
   shuffleMatrix 
 } from '../utils/pikachuEngine';
 import { pikachuAudio } from '../utils/pikachuAudio';
-import { addLeaderboardEntry, leaderboardNameExists } from './Leaderboard';
+import { addLeaderboardEntry, leaderboardNameExists } from '../utils/leaderboardUtils';
+import { isOnline, addOnlineScore, unlockAchievement } from '../utils/supabaseClient';
 
 const GAP = 2;
 
@@ -45,6 +46,13 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [cellSize, setCellSize] = useState(50);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Dialogs
   const [showWinModal, setShowWinModal] = useState(false);
@@ -100,6 +108,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
     pauseDuration.current = 0;
     
     pikachuAudio.playBGM();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playRow, playCol, difficulty, maxTime, shuffles]);
 
   // Bộ đếm thời gian chơi
@@ -371,6 +380,16 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
     }
 
     addLeaderboardEntry(category, name, score, elapsedTime);
+    
+    if (isOnline()) {
+      addOnlineScore(name, score, elapsedTime, category);
+    }
+
+    unlockAchievement('first_win');
+    if (score >= 500) {
+      unlockAchievement('score_500');
+    }
+
     setShowWinModal(false);
     onHome();
   };
@@ -387,20 +406,33 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
   const boardWidth = col * (cellSize + GAP) - GAP;
   const boardHeight = row * (cellSize + GAP) - GAP;
 
+  const isMobile = windowWidth < 768;
+  const boardScale = isMobile ? Math.min(1, (windowWidth - 20) / boardWidth) : 1;
+  const wrapperHeight = boardHeight * boardScale;
+
   return (
     <div className="game-screen" style={{ '--cell-size': `${cellSize}px` }}>
       {/* Khu vực bàn cờ */}
       <div 
         className="board-wrapper" 
         style={{ 
-          width: boardWidth + 40, 
-          height: boardHeight + 40,
+          width: isMobile ? '100%' : boardWidth + 40, 
+          height: isMobile ? wrapperHeight + 20 : boardHeight + 40,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center'
         }}
       >
-        <div style={{ position: 'relative', width: boardWidth, height: boardHeight }}>
+        <div 
+          style={{ 
+            position: 'relative', 
+            width: boardWidth, 
+            height: boardHeight,
+            transform: `scale(${boardScale})`,
+            transformOrigin: 'center center',
+            flexShrink: 0
+          }}
+        >
           <div 
             key={shuffleKey}
             className="board-grid" 
@@ -455,51 +487,57 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
         
         <div className="sidebar-content">
           <div className="hud-grid">
-            <div className="hud-label">Điểm số:</div>
-            <div className="hud-val hud-score">{score}</div>
+            <div className="hud-item">
+              <div className="hud-label">Điểm số:</div>
+              <div className="hud-val hud-score">{score}</div>
+            </div>
 
-            <div className="hud-label">Thời gian:</div>
-            <div className="hud-val hud-time-container">
-              <div className="progress-bar-bg">
-                <div 
-                  className={`progress-bar-fill ${timeStatus}`} 
-                  style={{ width: `${timePercentage}%` }}
-                />
-              </div>
-              <div className="hud-time-text" style={{ color: timeStatus === 'danger' ? 'var(--accent-red)' : timeStatus === 'warning' ? 'var(--accent-orange)' : 'var(--accent-green)' }}>
-                {formatHUDTime(timeLeft)}
+            <div className="hud-item">
+              <div className="hud-label">Thời gian:</div>
+              <div className="hud-val hud-time-container">
+                <div className="progress-bar-bg">
+                  <div 
+                    className={`progress-bar-fill ${timeStatus}`} 
+                    style={{ width: `${timePercentage}%` }}
+                  />
+                </div>
+                <div className="hud-time-text" style={{ color: timeStatus === 'danger' ? 'var(--accent-red)' : timeStatus === 'warning' ? 'var(--accent-orange)' : 'var(--accent-green)' }}>
+                  {formatHUDTime(timeLeft)}
+                </div>
               </div>
             </div>
 
-            <div className="hud-label">Trợ giúp:</div>
-            <div className="hud-val hud-shuffles">Đổi hình ({remainingShuffles})</div>
+            <div className="hud-item">
+              <div className="hud-label">Trợ giúp:</div>
+              <div className="hud-val hud-shuffles">Đổi hình ({remainingShuffles})</div>
+            </div>
           </div>
 
-          <button 
-            className="sidebar-btn btn-sidebar-shuffle" 
-            onClick={handleShuffle}
-            disabled={isPaused || remainingShuffles <= 0}
-            style={{ opacity: remainingShuffles <= 0 ? 0.5 : 1 }}
-          >
-            ĐỔI HÌNH
-          </button>
-          
-          <button className="sidebar-btn btn-sidebar-settings" onClick={() => {
-            pikachuAudio.playSound('click');
-            setShowSettingsModal(true);
-          }} style={{ backgroundColor: '#4a5568' }}>
-            CÀI ĐẶT
-          </button>
+          <div className="sidebar-buttons">
+            <button 
+              className="sidebar-btn btn-sidebar-shuffle" 
+              onClick={handleShuffle}
+              disabled={isPaused || remainingShuffles <= 0}
+              style={{ opacity: remainingShuffles <= 0 ? 0.5 : 1 }}
+            >
+              ĐỔI HÌNH
+            </button>
+            
+            <button className="sidebar-btn btn-sidebar-settings" onClick={() => {
+              pikachuAudio.playSound('click');
+              setShowSettingsModal(true);
+            }} style={{ backgroundColor: '#4a5568' }}>
+              CÀI ĐẶT
+            </button>
 
-          <button className="sidebar-btn btn-sidebar-new" onClick={handleReplay}>
-            TRÒ CHƠI MỚI
-          </button>
+            <button className="sidebar-btn btn-sidebar-new" onClick={handleReplay}>
+              TRÒ CHƠI MỚI
+            </button>
 
-          <button className="sidebar-btn btn-sidebar-home" onClick={onHome}>
-            VỀ TRANG CHỦ
-          </button>
-
-          <img src="/icon/pikachu.png" alt="Pikachu Logo" className="sidebar-logo" />
+            <button className="sidebar-btn btn-sidebar-home" onClick={onHome}>
+              VỀ TRANG CHỦ
+            </button>
+          </div>
         </div>
       </div>
 
