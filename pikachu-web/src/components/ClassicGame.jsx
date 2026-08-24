@@ -483,33 +483,38 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
 
       {/* Cột HUD điều khiển */}
       <div className="sidebar">
-        <div className="sidebar-title">BẢNG ĐIỀU KHIỂN</div>
+        <div className="sidebar-title">⚡ CLASSIC MODE</div>
         
         <div className="sidebar-content">
           <div className="hud-grid">
+            {/* SCORE */}
             <div className="hud-item">
-              <div className="hud-label">Điểm số:</div>
+              <div className="hud-label">🏆 ĐIỂM SỐ</div>
               <div className="hud-val hud-score">{score}</div>
             </div>
 
+            {/* TIME BAR */}
             <div className="hud-item">
-              <div className="hud-label">Thời gian:</div>
-              <div className="hud-val hud-time-container">
-                <div className="progress-bar-bg">
-                  <div 
-                    className={`progress-bar-fill ${timeStatus}`} 
-                    style={{ width: `${timePercentage}%` }}
-                  />
-                </div>
-                <div className="hud-time-text" style={{ color: timeStatus === 'danger' ? 'var(--accent-red)' : timeStatus === 'warning' ? 'var(--accent-orange)' : 'var(--accent-green)' }}>
-                  {formatHUDTime(timeLeft)}
+              <div className="hud-label">⏱ THỜI GIAN CÒN LẠI</div>
+              <div className="hud-time-container">
+                <div className="hud-bar-row">
+                  <div className="progress-bar-bg">
+                    <div 
+                      className={`progress-bar-fill ${timeStatus}`} 
+                      style={{ width: `${timePercentage}%` }}
+                    />
+                  </div>
+                  <div className="hud-time-text" style={{ color: timeStatus === 'danger' ? '#ff5252' : timeStatus === 'warning' ? '#ff9800' : '#69f0ae' }}>
+                    {formatHUDTime(timeLeft)}
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* SHUFFLES */}
             <div className="hud-item">
-              <div className="hud-label">Trợ giúp:</div>
-              <div className="hud-val hud-shuffles">Đổi hình ({remainingShuffles})</div>
+              <div className="hud-label">🔀 ĐỔI HÌNH CÒN LẠI</div>
+              <div className="hud-val hud-shuffles">{remainingShuffles} lượt</div>
             </div>
           </div>
 
@@ -518,26 +523,28 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
               className="sidebar-btn btn-sidebar-shuffle" 
               onClick={handleShuffle}
               disabled={isPaused || remainingShuffles <= 0}
-              style={{ opacity: remainingShuffles <= 0 ? 0.5 : 1 }}
+              style={{ opacity: remainingShuffles <= 0 ? 0.4 : 1 }}
             >
-              ĐỔI HÌNH
+              🔀 ĐỔI HÌNH
             </button>
             
             <button className="sidebar-btn btn-sidebar-settings" onClick={() => {
               pikachuAudio.playSound('click');
               setShowSettingsModal(true);
-            }} style={{ backgroundColor: '#4a5568' }}>
-              CÀI ĐẶT
+            }}>
+              ⚙️ CÀI ĐẶT
             </button>
 
             <button className="sidebar-btn btn-sidebar-new" onClick={handleReplay}>
-              TRÒ CHƠI MỚI
+              🔄 CHƠI LẠI
             </button>
 
             <button className="sidebar-btn btn-sidebar-home" onClick={onHome}>
-              VỀ TRANG CHỦ
+              🏠 TRANG CHỦ
             </button>
           </div>
+
+          <img src="/icon/pikachu.png" alt="" className="sidebar-logo" />
         </div>
       </div>
 
@@ -607,134 +614,78 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
         </div>
       )}
 
-      {/* CUSTOM WIN MODAL */}
+      {/* WIN MODAL */}
       {showWinModal && (
         <div className="modal-overlay">
-          <div className="panel modal-content">
+          <div className="modal-content">
+            <div style={{ fontSize: '52px', marginBottom: '8px' }}>🏆</div>
             <h2 className="modal-title">CHIẾN THẮNG!</h2>
-            <p className="modal-text">Bạn đã dọn sạch toàn bộ bàn cờ.</p>
-            <p className="modal-stats">Điểm đạt được: <span style={{color: 'var(--accent-gold)'}}>{score}</span></p>
-            <p className="modal-stats">Thời gian hoàn thành: <span style={{color: 'var(--accent-cyan)'}}>{formatHUDTime(elapsedTime)}</span></p>
-            
+            <p className="modal-text">Bạn đã dọn sạch toàn bộ bàn cờ!</p>
+
+            <div className="modal-divider" />
+
+            <p className="modal-stats">
+              🌟 Điểm: <span style={{ color: '#ffcc00', fontWeight: 900, fontSize: '20px' }}>{score}</span>
+            </p>
+            <p className="modal-stats">
+              ⏱ Thời gian: <span style={{ color: '#00e5ff', fontWeight: 800 }}>{formatHUDTime(elapsedTime)}</span>
+            </p>
+
             <div className="modal-input-group">
-              <label>Nhập tên lưu bảng xếp hạng:</label>
-              <input 
-                type="text" 
-                value={playerName} 
-                onChange={(e) => {
-                  setPlayerName(e.target.value);
-                  setNameError('');
-                }}
-                placeholder="Tên của bạn..."
+              <label>✏️ LƯU TÊN VÀO BẢNG XẾP HẠNG</label>
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => { setPlayerName(e.target.value); setNameError(''); }}
+                placeholder="Nhập tên của bạn..."
                 className="modal-input"
                 maxLength={15}
+                autoFocus
               />
-              {nameError && <div className="modal-error">{nameError}</div>}
+              {nameError && <div className="modal-error">⚠️ {nameError}</div>}
             </div>
 
             <div className="modal-actions">
-              <button className="menu-btn btn-classic" onClick={handleSaveWin} style={{ width: '100%', marginBottom: '10px' }}>
-                LƯU KỶ LỤC
+              <button className="menu-btn btn-classic" onClick={handleSaveWin}>
+                💾 LƯU KỶ LỤC
               </button>
-              <button className="menu-btn btn-back" onClick={handleReplay} style={{ width: '100%' }}>
-                CHƠI LẠI
+              <button className="menu-btn btn-back" onClick={handleReplay}>
+                🔄 CHƠI LẠI
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* CUSTOM LOSE MODAL */}
+      {/* LOSE MODAL */}
       {showLoseModal && (
         <div className="modal-overlay">
-          <div className="panel modal-content">
-            <h2 className="modal-title" style={{ color: 'var(--accent-red)' }}>THUA CUỘC!</h2>
-            <p className="modal-text">Hết giờ mất rồi!</p>
-            <p className="modal-stats">Điểm đạt được: <span style={{color: 'var(--accent-gold)'}}>{score}</span></p>
-            
-            <div className="modal-actions" style={{ marginTop: '20px' }}>
-              <button className="menu-btn btn-classic" onClick={handleReplay} style={{ width: '100%', marginBottom: '10px' }}>
-                CHƠI LẠI
+          <div className="modal-content">
+            <div style={{ fontSize: '52px', marginBottom: '8px' }}>⌛</div>
+            <h2 className="modal-title" style={{ color: '#ff5252', textShadow: '0 0 20px rgba(255,82,82,0.4)' }}>
+              HẾT GIỜ!
+            </h2>
+            <p className="modal-text">Thời gian đã cạn. Cố gắng hơn lần sau!</p>
+
+            <div className="modal-divider" />
+
+            <p className="modal-stats">
+              🌟 Điểm đạt được: <span style={{ color: '#ffcc00', fontWeight: 900, fontSize: '20px' }}>{score}</span>
+            </p>
+
+            <div className="modal-actions" style={{ marginTop: '24px' }}>
+              <button className="menu-btn btn-classic" onClick={handleReplay}>
+                🔄 THỬ LẠI
               </button>
-              <button className="menu-btn btn-back" onClick={onHome} style={{ width: '100%' }}>
-                VỀ TRANG CHỦ
+              <button className="menu-btn btn-back" onClick={onHome}>
+                🏠 VỀ TRANG CHỦ
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <style>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background-color: rgba(0,0,0,0.8);
-          z-index: 100;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .modal-content {
-          width: 360px;
-          padding: 30px 20px;
-          text-align: center;
-        }
-        .modal-title {
-          font-size: 28px;
-          color: var(--accent-green);
-          margin-bottom: 15px;
-          font-weight: bold;
-        }
-        .modal-text {
-          font-size: 15px;
-          color: var(--text-main);
-          margin-bottom: 10px;
-        }
-        .modal-stats {
-          font-size: 16px;
-          font-weight: bold;
-          margin-bottom: 8px;
-        }
-        .modal-input-group {
-          margin-top: 20px;
-          margin-bottom: 20px;
-          text-align: left;
-        }
-        .modal-input-group label {
-          display: block;
-          font-size: 12px;
-          color: var(--text-muted);
-          margin-bottom: 6px;
-        }
-        .modal-input {
-          width: 100%;
-          height: 38px;
-          background-color: #121620;
-          border: 1px solid #303a4e;
-          border-radius: 4px;
-          color: white;
-          padding: 0 10px;
-          font-size: 14px;
-          font-weight: bold;
-          outline: none;
-        }
-        .modal-input:focus {
-          border-color: var(--accent-cyan);
-          box-shadow: 0 0 5px var(--accent-cyan);
-        }
-        .modal-error {
-          color: var(--accent-red);
-          font-size: 12px;
-          margin-top: 5px;
-          font-weight: bold;
-        }
-        .modal-actions {
-          margin-top: 15px;
-        }
-      `}</style>
     </div>
   );
 }
+

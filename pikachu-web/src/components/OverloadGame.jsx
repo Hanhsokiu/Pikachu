@@ -790,20 +790,32 @@ export default function OverloadGame({ onHome }) {
   const wrapperHeight = boardHeight * boardScale;
 
   return (
-    <div className="game-screen" style={{ '--cell-size': `${cellSize}px` }}>
+    <div
+      className="game-screen"
+      style={{
+        '--cell-size': `${cellSize}px`,
+        // Lock height so sidebar content changes never shift the board
+        height: isMobile ? 'auto' : `${boardHeight + 40}px`,
+        alignItems: 'stretch',
+      }}
+    >
       {/* Khu vực bàn cờ Overload */}
-      <div 
-        className={`board-wrapper ${shakeClass}`} 
-        style={{ 
-          width: isMobile ? '100%' : boardWidth + 40, 
+      <div
+        className={`board-wrapper ${shakeClass}`}
+        style={{
+          width: isMobile ? '100%' : boardWidth + 40,
           height: isMobile ? wrapperHeight + 20 : boardHeight + 40,
           backgroundColor: gameState.freezeTime > 0 ? '#0f2430' : '#1a1f2a',
           transition: 'background-color 0.3s',
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center'
+          alignItems: 'center',
+          // Prevents board from growing/shrinking with sidebar
+          flexShrink: 0,
+          alignSelf: 'flex-start',
         }}
       >
+
         <div 
           style={{ 
             position: 'relative', 
@@ -871,64 +883,99 @@ export default function OverloadGame({ onHome }) {
 
       {/* Cột HUD thông số */}
       <div className="sidebar">
-        <div className="sidebar-title">PIKACHU OVERLOAD</div>
+        <div className="sidebar-title">🔥 OVERLOAD MODE</div>
         
         <div className="sidebar-content">
           <div className="hud-grid">
+            {/* SCORE */}
             <div className="hud-item">
-              <div className="hud-label">Điểm số:</div>
+              <div className="hud-label">🏆 ĐIỂM SỐ</div>
               <div className="hud-val hud-score">{gameState.score}</div>
             </div>
 
-            <div className="hud-item">
-              <div className="hud-label">Áp lực:</div>
-              <div className="hud-val hud-time-container">
-                <div className="progress-bar-bg">
-                  <div 
-                    className={`progress-bar-fill ${pressureStatus}`} 
-                    style={{ width: `${gameState.pressure}%`, backgroundColor: gameState.freezeTime > 0 ? '#00e5ff' : '' }}
-                  />
-                </div>
-                <div className="hud-time-text" style={{ color: gameState.freezeTime > 0 ? 'var(--accent-cyan)' : pressureStatus === 'danger' ? 'var(--accent-red)' : pressureStatus === 'warning' ? 'var(--accent-orange)' : 'var(--accent-green)' }}>
-                  {gameState.freezeTime > 0 ? 'BĂNG' : `${gameState.pressure}%`}
+            {/* PRESSURE BAR — Most important in Overload */}
+            <div className="hud-item" style={{
+              border: pressureStatus === 'danger' ? '1px solid rgba(255,82,82,0.4)' :
+                      gameState.freezeTime > 0 ? '1px solid rgba(0,229,255,0.4)' :
+                      '1px solid rgba(255,255,255,0.06)',
+              minHeight: '68px',
+            }}>
+              <div className="hud-label" style={{
+                color: pressureStatus === 'danger' ? '#ff5252' :
+                       gameState.freezeTime > 0 ? '#00e5ff' : 'var(--text-muted)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+              }}>
+                {gameState.freezeTime > 0 ? '❄️ ĐÓNG BĂNG' : '⚡ ÁP LỰC HỆ THỐNG'}
+              </div>
+
+              <div className="hud-time-container">
+                <div className="hud-bar-row">
+                  <div className="progress-bar-bg">
+                    <div 
+                      className={`progress-bar-fill ${gameState.freezeTime > 0 ? 'frozen' : pressureStatus}`}
+                      style={{ width: `${gameState.pressure}%` }}
+                    />
+                  </div>
+                  <div className="hud-time-text" style={{ 
+                    color: gameState.freezeTime > 0 ? '#00e5ff' : 
+                           pressureStatus === 'danger' ? '#ff5252' : 
+                           pressureStatus === 'warning' ? '#ff9800' : '#69f0ae',
+                    minWidth: '44px'
+                  }}>
+                    {gameState.freezeTime > 0 ? `${gameState.freezeTime}s` : `${gameState.pressure}%`}
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* SURVIVAL TIME */}
             <div className="hud-item">
-              <div className="hud-label">Kế tiếp:</div>
-              <div className="hud-val hud-next-wave">{waveDisplay}</div>
-            </div>
-
-            <div className="hud-item">
-              <div className="hud-label">Sinh tồn:</div>
+              <div className="hud-label">⏱ SINH TỒN</div>
               <div className="hud-val hud-survival">{formatHUDTime(gameState.survivalTime)}</div>
             </div>
 
-            {gameState.comboCount > 0 && (
-              <div className="hud-item">
-                <div className="hud-label">Combo:</div>
-                <div className="hud-val hud-combo">x{gameState.comboCount}</div>
-              </div>
-            )}
+            {/* NEXT WAVE */}
+            <div className="hud-item">
+              <div className="hud-label">🌊 WAVE KẾ TIẾP</div>
+              <div className="hud-val hud-next-wave">{waveDisplay}</div>
+            </div>
+
+            {/* COMBO — always rendered, hidden when 0 to prevent layout shift */}
+            <div
+              className="hud-item"
+              style={{
+                border: '1px solid rgba(255,82,82,0.3)',
+                background: 'rgba(255,82,82,0.06)',
+                visibility: gameState.comboCount > 0 ? 'visible' : 'hidden',
+                transition: 'opacity 0.2s ease',
+                opacity: gameState.comboCount > 0 ? 1 : 0,
+              }}
+            >
+              <div className="hud-label" style={{ color: '#ff5252' }}>🔥 COMBO</div>
+              <div className="hud-val hud-combo">×{gameState.comboCount}</div>
+            </div>
+
           </div>
           
           <div className="sidebar-buttons">
             <button className="sidebar-btn btn-sidebar-settings" onClick={() => {
               pikachuAudio.playSound('click');
               setShowSettingsModal(true);
-            }} style={{ backgroundColor: '#4a5568' }}>
-              CÀI ĐẶT
+            }}>
+              ⚙️ CÀI ĐẶT
             </button>
 
             <button className="sidebar-btn btn-sidebar-new" onClick={initGame}>
-              TRÒ CHƠI MỚI
+              🔄 CHƠI LẠI
             </button>
 
             <button className="sidebar-btn btn-sidebar-home" onClick={onHome}>
-              VỀ TRANG CHỦ
+              🏠 TRANG CHỦ
             </button>
           </div>
+
+          <img src="/icon/pikachu.png" alt="" className="sidebar-logo" />
         </div>
       </div>
 
@@ -998,114 +1045,52 @@ export default function OverloadGame({ onHome }) {
         </div>
       )}
 
-      {/* CUSTOM LOSE MODAL (OVERLOAD GAME OVER) */}
+      {/* OVERLOAD GAME OVER MODAL */}
       {showLoseModal && (
         <div className="modal-overlay">
-          <div className="panel modal-content">
-            <h2 className="modal-title" style={{ color: 'var(--accent-red)' }}>💀 HỆ THỐNG SỤP ĐỔ</h2>
-            <p className="modal-text">Bạn đã bị quá tải hoàn toàn.</p>
-            <p className="modal-stats">Thời gian sinh tồn: <span style={{color: 'var(--accent-cyan)'}}>{formatHUDTime(gameState.survivalTime)}</span></p>
-            <p className="modal-stats">Điểm đạt được: <span style={{color: 'var(--accent-gold)'}}>{gameState.score}</span></p>
-            
+          <div className="modal-content">
+            <div style={{ fontSize: '56px', marginBottom: '6px', animation: 'heroFloat 2s ease-in-out infinite' }}>💀</div>
+            <h2 className="modal-title" style={{ color: '#ff5252', textShadow: '0 0 24px rgba(255,82,82,0.5)' }}>
+              HỆ THỐNG SỤP ĐỔ
+            </h2>
+            <p className="modal-text">Áp lực đã đạt mức 0% — Hệ thống quá tải hoàn toàn!</p>
+
+            <div className="modal-divider" />
+
+            <p className="modal-stats">
+              ⏱ Sinh tồn: <span style={{ color: '#00e5ff', fontWeight: 800, fontSize: '18px' }}>{formatHUDTime(gameState.survivalTime)}</span>
+            </p>
+            <p className="modal-stats">
+              🌟 Điểm: <span style={{ color: '#ffcc00', fontWeight: 900, fontSize: '20px' }}>{gameState.score}</span>
+            </p>
+
             <div className="modal-input-group">
-              <label>Nhập tên lưu bảng xếp hạng sinh tồn:</label>
-              <input 
-                type="text" 
-                value={playerName} 
-                onChange={(e) => {
-                  setPlayerName(e.target.value);
-                  setNameError('');
-                }}
-                placeholder="Tên của bạn..."
+              <label>✏️ LƯU VÀO BẢNG SINH TỒN</label>
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => { setPlayerName(e.target.value); setNameError(''); }}
+                placeholder="Nhập tên của bạn..."
                 className="modal-input"
                 maxLength={15}
+                autoFocus
               />
-              {nameError && <div className="modal-error">{nameError}</div>}
+              {nameError && <div className="modal-error">⚠️ {nameError}</div>}
             </div>
 
             <div className="modal-actions">
-              <button className="menu-btn btn-classic" onClick={handleSaveLose} style={{ width: '100%', marginBottom: '10px' }}>
-                LƯU KỶ LỤC
+              <button className="menu-btn btn-classic" onClick={handleSaveLose}>
+                💾 LƯU KỶ LỤC
               </button>
-              <button className="menu-btn btn-back" onClick={initGame} style={{ width: '100%' }}>
-                CHƠI LẠI
+              <button className="menu-btn btn-back" onClick={initGame}>
+                🔄 THỬ LẠI
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <style>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background-color: rgba(0,0,0,0.8);
-          z-index: 100;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .modal-content {
-          width: 360px;
-          padding: 30px 20px;
-          text-align: center;
-        }
-        .modal-title {
-          font-size: 28px;
-          color: var(--accent-green);
-          margin-bottom: 15px;
-          font-weight: bold;
-        }
-        .modal-text {
-          font-size: 15px;
-          color: var(--text-main);
-          margin-bottom: 10px;
-        }
-        .modal-stats {
-          font-size: 16px;
-          font-weight: bold;
-          margin-bottom: 8px;
-        }
-        .modal-input-group {
-          margin-top: 20px;
-          margin-bottom: 20px;
-          text-align: left;
-        }
-        .modal-input-group label {
-          display: block;
-          font-size: 12px;
-          color: var(--text-muted);
-          margin-bottom: 6px;
-        }
-        .modal-input {
-          width: 100%;
-          height: 38px;
-          background-color: #121620;
-          border: 1px solid #303a4e;
-          border-radius: 4px;
-          color: white;
-          padding: 0 10px;
-          font-size: 14px;
-          font-weight: bold;
-          outline: none;
-        }
-        .modal-input:focus {
-          border-color: var(--accent-cyan);
-          box-shadow: 0 0 5px var(--accent-cyan);
-        }
-        .modal-error {
-          color: var(--accent-red);
-          font-size: 12px;
-          margin-top: 5px;
-          font-weight: bold;
-        }
-        .modal-actions {
-          margin-top: 15px;
-        }
-      `}</style>
     </div>
   );
 }
+

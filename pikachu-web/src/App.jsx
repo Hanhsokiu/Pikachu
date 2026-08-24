@@ -6,6 +6,7 @@ import Leaderboard from './components/Leaderboard';
 import ClassicGame from './components/ClassicGame';
 import OverloadGame from './components/OverloadGame';
 import AuthModal from './components/AuthModal';
+import HomeScreen from './components/HomeScreen';
 
 export default function App() {
   const [screen, setScreen] = useState('HOME'); // HOME, DIFFICULTY, GAME_CLASSIC, GAME_OVERLOAD, RANK, INSTRUCTIONS
@@ -65,45 +66,14 @@ export default function App() {
   return (
     <div className="app-container">
       {screen === 'HOME' && (
-        <div className="panel home-screen">
-          <h1 className="title-main">PIKACHU CLASSIC</h1>
-          <p className="subtitle-main">Thử Thách Trí Tuệ & Sự Nhanh Mắt</p>
-          
-          <img src="/icon/pikachu.png" alt="Pikachu Logo" className="logo-main" />
-
-          <button className="menu-btn btn-classic" onClick={() => handleNavigate('DIFFICULTY')}>
-            CHƠI CỔ ĐIỂN
-          </button>
-          <button className="menu-btn btn-overload" onClick={() => handleNavigate('GAME_OVERLOAD')}>
-            PIKACHU OVERLOAD
-          </button>
-          <button className="menu-btn btn-rank" onClick={() => handleNavigate('RANK')}>
-            XẾP HẠNG
-          </button>
-          <button className="menu-btn btn-guide" onClick={() => handleNavigate('INSTRUCTIONS')}>
-            HƯỚNG DẪN
-          </button>
-          <button className="menu-btn btn-settings" onClick={() => {
+        <HomeScreen
+          onNavigate={handleNavigate}
+          onSettings={() => {
             pikachuAudio.playSound('click');
             setShowSettingsModal(true);
-          }} style={{ backgroundColor: '#2d3748' }}>
-            CÀI ĐẶT
-          </button>
-          <button className="menu-btn" onClick={() => {
-            pikachuAudio.playSound('click');
-            setShowAuthModal(true);
-          }} style={{ backgroundColor: '#1a3a4a', border: '1px solid rgba(0,229,255,0.3)' }}>
-            🏆 TÀI KHOẢN & THÀNH TỰU
-          </button>
-          <button className="menu-btn btn-exit" onClick={() => {
-            pikachuAudio.playSound('click');
-            if (window.confirm("Thoát trò chơi?")) {
-              window.close();
-            }
-          }}>
-            THOÁT GAME
-          </button>
-        </div>
+          }}
+          onAccount={() => setShowAuthModal(true)}
+        />
       )}
 
       {showAuthModal && (
@@ -178,28 +148,61 @@ export default function App() {
 
       {screen === 'DIFFICULTY' && (
         <div className="panel difficulty-screen">
-          <h2 className="title-main" style={{ fontSize: '30px', marginBottom: '30px' }}>CHỌN CHẾ ĐỘ CHƠI</h2>
-          
-          <button className="menu-btn btn-classic" onClick={() => startClassicGame(6, 6, 0, 400, 5)}>
-            DỄ
-          </button>
-          <p className="diff-desc">5 loại hình  •  400 giây  •  5 lần đổi hình</p>
-          
-          <button className="menu-btn btn-overload" onClick={() => startClassicGame(10, 10, 1, 300, 3)} style={{ backgroundColor: '#af5208' }}>
-            TRUNG BÌNH
-          </button>
-          <p className="diff-desc">15 loại hình  •  300 giây  •  3 lần đổi hình</p>
+          <h2 className="title-main" style={{ fontSize: '28px', marginBottom: '6px' }}>CHỌN ĐỘ KHÓ</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px', letterSpacing: '0.5px' }}>
+            Chế độ Cổ Điển — Dọn sạch toàn bộ bàn cờ để chiến thắng
+          </p>
 
-          <button className="menu-btn btn-exit" onClick={() => startClassicGame(14, 14, 2, 200, 1)} style={{ backgroundColor: '#a31c1c' }}>
-            KHỎ
-          </button>
-          <p className="diff-desc" style={{ marginBottom: '25px' }}>21 loại hình  •  200 giây  •  1 lần đổi hình</p>
+          <div className="diff-cards">
+            {/* DỄ */}
+            <div className="diff-card easy" onClick={() => startClassicGame(6, 6, 0, 400, 5)}>
+              <div className="diff-card-icon">🌿</div>
+              <div className="diff-card-info">
+                <div className="diff-card-title">DỄ</div>
+                <div className="diff-card-stats">
+                  <span className="diff-stat">🎴 5 loại hình</span>
+                  <span className="diff-stat">⏱ 400 giây</span>
+                  <span className="diff-stat">🔀 5 lần đổi</span>
+                </div>
+              </div>
+              <div className="diff-card-arrow">›</div>
+            </div>
 
-          <button className="menu-btn btn-back" onClick={() => handleNavigate('HOME')}>
-            QUAY LẠI
+            {/* TRUNG BÌNH */}
+            <div className="diff-card normal" onClick={() => startClassicGame(10, 10, 1, 300, 3)}>
+              <div className="diff-card-icon">🔥</div>
+              <div className="diff-card-info">
+                <div className="diff-card-title">TRUNG BÌNH</div>
+                <div className="diff-card-stats">
+                  <span className="diff-stat">🎴 15 loại hình</span>
+                  <span className="diff-stat">⏱ 300 giây</span>
+                  <span className="diff-stat">🔀 3 lần đổi</span>
+                </div>
+              </div>
+              <div className="diff-card-arrow">›</div>
+            </div>
+
+            {/* KHÓ */}
+            <div className="diff-card hard" onClick={() => startClassicGame(14, 14, 2, 200, 1)}>
+              <div className="diff-card-icon">💀</div>
+              <div className="diff-card-info">
+                <div className="diff-card-title">KHÓ</div>
+                <div className="diff-card-stats">
+                  <span className="diff-stat">🎴 21 loại hình</span>
+                  <span className="diff-stat">⏱ 200 giây</span>
+                  <span className="diff-stat">🔀 1 lần đổi</span>
+                </div>
+              </div>
+              <div className="diff-card-arrow">›</div>
+            </div>
+          </div>
+
+          <button className="menu-btn btn-back" onClick={() => handleNavigate('HOME')} style={{ width: '100%' }}>
+            ← QUAY LẠI
           </button>
         </div>
       )}
+
 
       {screen === 'INSTRUCTIONS' && (
         <Instructions onBack={() => handleNavigate('HOME')} />
