@@ -104,6 +104,18 @@ export default function OverloadGame({ onHome }) {
     showLoseModalRef.current = showLoseModal;
   }, [showLoseModal]);
 
+  const handlePause = () => {
+    pikachuAudio.playSound('click');
+    setIsPaused(prev => {
+      if (!prev) {
+        pikachuAudio.pauseBGM && pikachuAudio.pauseBGM();
+      } else {
+        pikachuAudio.playBGM && pikachuAudio.playBGM();
+      }
+      return !prev;
+    });
+  };
+
   // Tính toán kích thước ô cờ linh hoạt
   useEffect(() => {
     const handleResize = () => {
@@ -801,7 +813,7 @@ export default function OverloadGame({ onHome }) {
     >
       {/* Khu vực bàn cờ Overload */}
       <div
-        className={`board-wrapper ${shakeClass}`}
+        className={`board-wrapper ${shakeClass} ${isPaused ? 'board-paused' : ''}`}
         style={{
           width: isMobile ? '100%' : boardWidth + 40,
           height: isMobile ? wrapperHeight + 20 : boardHeight + 40,
@@ -959,6 +971,15 @@ export default function OverloadGame({ onHome }) {
           </div>
           
           <div className="sidebar-buttons">
+            {/* PAUSE BUTTON */}
+            <button
+              className={`sidebar-btn btn-sidebar-pause ${isPaused ? 'btn-paused' : ''}`}
+              onClick={handlePause}
+              disabled={showLoseModal}
+            >
+              {isPaused ? '▶ TIẾP TỤC' : '⏸ TẠM DỪNG'}
+            </button>
+
             <button className="sidebar-btn btn-sidebar-settings" onClick={() => {
               pikachuAudio.playSound('click');
               setShowSettingsModal(true);
@@ -974,6 +995,7 @@ export default function OverloadGame({ onHome }) {
               🏠 TRANG CHỦ
             </button>
           </div>
+
 
           <img src="/icon/pikachu.png" alt="" className="sidebar-logo" />
         </div>
@@ -1041,6 +1063,48 @@ export default function OverloadGame({ onHome }) {
             >
               ĐỒNG Ý
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ PAUSE OVERLAY ═══ */}
+      {isPaused && !showLoseModal && (
+        <div className="pause-overlay">
+          <div className="pause-modal">
+            <div className="pause-icon">⏸</div>
+            <h2 className="pause-title">TẠM DỪNG</h2>
+            <p className="pause-sub">Game đang tạm dừng. Bàn cờ đã được ẩn để đảm bảo công bằng.</p>
+
+            <div className="pause-stats">
+              <div className="pause-stat">
+                <span className="pause-stat-label">🏆 Điểm</span>
+                <span className="pause-stat-val" style={{ color: '#ffcc00' }}>{gameState.score}</span>
+              </div>
+              <div className="pause-stat">
+                <span className="pause-stat-label">⏱ Sinh tồn</span>
+                <span className="pause-stat-val" style={{ color: '#00e5ff' }}>
+                  {formatHUDTime(gameState.survivalTime)}
+                </span>
+              </div>
+              <div className="pause-stat">
+                <span className="pause-stat-label">⚡ Áp lực</span>
+                <span className="pause-stat-val" style={{ color: gameState.pressure < 25 ? '#ff5252' : '#69f0ae' }}>
+                  {gameState.pressure}%
+                </span>
+              </div>
+            </div>
+
+            <div className="pause-actions">
+              <button className="pause-btn pause-btn-resume" onClick={handlePause}>
+                ▶ TIẾP TỤC
+              </button>
+              <button className="pause-btn pause-btn-restart" onClick={initGame}>
+                🔄 CHƠI LẠI
+              </button>
+              <button className="pause-btn pause-btn-home" onClick={onHome}>
+                🏠 TRANG CHỦ
+              </button>
+            </div>
           </div>
         </div>
       )}

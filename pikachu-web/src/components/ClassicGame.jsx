@@ -69,7 +69,23 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
   const pauseDuration = useRef(0);
   const pauseStart = useRef(0);
 
-  // Tính toán kích thước ô cờ linh hoạt
+  const handlePause = () => {
+    pikachuAudio.playSound('click');
+    setIsPaused(prev => {
+      if (!prev) {
+        // Pausing: record when pause started
+        pauseStart.current = Date.now();
+        pikachuAudio.pauseBGM && pikachuAudio.pauseBGM();
+      } else {
+        // Resuming: accumulate pause duration
+        pauseDuration.current += Date.now() - pauseStart.current;
+        pikachuAudio.playBGM && pikachuAudio.playBGM();
+      }
+      return !prev;
+    });
+  };
+
+
   useEffect(() => {
     const handleResize = () => {
       const vw = window.innerWidth;
@@ -413,14 +429,15 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
   return (
     <div className="game-screen" style={{ '--cell-size': `${cellSize}px` }}>
       {/* Khu vực bàn cờ */}
-      <div 
-        className="board-wrapper" 
-        style={{ 
-          width: isMobile ? '100%' : boardWidth + 40, 
-          height: isMobile ? wrapperHeight + 20 : boardHeight + 40,
+      <div
+        className={`board-wrapper ${isPaused ? 'board-paused' : ''}`}
+        style={{
+          width: isMobile ? '100%' : boardWidth + 40,
+          minHeight: isMobile ? wrapperHeight + 20 : boardHeight + 40,
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center'
+          alignItems: 'center',
+          alignSelf: 'stretch',
         }}
       >
         <div 
@@ -519,15 +536,24 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
           </div>
 
           <div className="sidebar-buttons">
-            <button 
-              className="sidebar-btn btn-sidebar-shuffle" 
+            <button
+              className="sidebar-btn btn-sidebar-shuffle"
               onClick={handleShuffle}
               disabled={isPaused || remainingShuffles <= 0}
               style={{ opacity: remainingShuffles <= 0 ? 0.4 : 1 }}
             >
               🔀 ĐỔI HÌNH
             </button>
-            
+
+            {/* PAUSE BUTTON */}
+            <button
+              className={`sidebar-btn btn-sidebar-pause ${isPaused ? 'btn-paused' : ''}`}
+              onClick={handlePause}
+              disabled={showWinModal || showLoseModal}
+            >
+              {isPaused ? '▶ TIẾP TỤC' : '⏸ TẠM DỪNG'}
+            </button>
+
             <button className="sidebar-btn btn-sidebar-settings" onClick={() => {
               pikachuAudio.playSound('click');
               setShowSettingsModal(true);
@@ -543,6 +569,7 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
               🏠 TRANG CHỦ
             </button>
           </div>
+
 
           <img src="/icon/pikachu.png" alt="" className="sidebar-logo" />
         </div>
@@ -614,8 +641,49 @@ export default function ClassicGame({ playRow, playCol, difficulty, maxTime, shu
         </div>
       )}
 
+      {/* ═══ PAUSE OVERLAY ═══ */}
+      {isPaused && !showWinModal && !showLoseModal && (
+        <div className="pause-overlay">
+          <div className="pause-modal">
+            <div className="pause-icon">⏸</div>
+            <h2 className="pause-title">TẠM DỪNG</h2>
+            <p className="pause-sub">Game đang tạm dừng. Thông tin bàn cờ đã được ẩn.</p>
+
+            <div className="pause-stats">
+              <div className="pause-stat">
+                <span className="pause-stat-label">🏆 Điểm</span>
+                <span className="pause-stat-val" style={{ color: '#ffcc00' }}>{score}</span>
+              </div>
+              <div className="pause-stat">
+                <span className="pause-stat-label">⏱ Còn lại</span>
+                <span className="pause-stat-val" style={{ color: timeStatus === 'danger' ? '#ff5252' : '#69f0ae' }}>
+                  {formatHUDTime(timeLeft)}
+                </span>
+              </div>
+              <div className="pause-stat">
+                <span className="pause-stat-label">🔀 Đổi hình</span>
+                <span className="pause-stat-val">{remainingShuffles}</span>
+              </div>
+            </div>
+
+            <div className="pause-actions">
+              <button className="pause-btn pause-btn-resume" onClick={handlePause}>
+                ▶ TIẾP TỤC
+              </button>
+              <button className="pause-btn pause-btn-restart" onClick={handleReplay}>
+                🔄 CHƠI LẠI
+              </button>
+              <button className="pause-btn pause-btn-home" onClick={onHome}>
+                🏠 TRANG CHỦ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* WIN MODAL */}
       {showWinModal && (
+
         <div className="modal-overlay">
           <div className="modal-content">
             <div style={{ fontSize: '52px', marginBottom: '8px' }}>🏆</div>
