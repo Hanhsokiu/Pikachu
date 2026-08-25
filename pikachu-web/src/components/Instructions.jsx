@@ -217,7 +217,7 @@ export default function Instructions({ onBack }) {
               </div>
               <div className="instr-banner-stats">
                 <span>🎴 Tối đa 21 loại</span>
-                <span>⏱ 200–400 giây</span>
+                <span>⏱ 210–400 giây</span>
                 <span>🔀 1–5 lần đổi</span>
               </div>
             </div>
@@ -269,7 +269,7 @@ export default function Instructions({ onBack }) {
               <div className="instr-difficulty-row">
                 <span className="diff-badge easy">🌿 DỄ — 5 loại · 400 giây · 5 lần đổi</span>
                 <span className="diff-badge normal">🔥 TRUNG BÌNH — 15 loại · 300 giây · 3 lần đổi</span>
-                <span className="diff-badge hard">💀 KHÓ — 21 loại · 200 giây · 1 lần đổi</span>
+                <span className="diff-badge hard">💀 KHÓ — 21 loại · 210 giây · 1 lần đổi</span>
               </div>
             </div>
 

@@ -183,13 +183,13 @@ export default function App() {
             </div>
 
             {/* KHÓ */}
-            <div className="diff-card hard" onClick={() => startClassicGame(14, 14, 2, 200, 1)}>
+            <div className="diff-card hard" onClick={() => startClassicGame(14, 14, 2, 210, 1)}>
               <div className="diff-card-icon">💀</div>
               <div className="diff-card-info">
                 <div className="diff-card-title">KHÓ</div>
                 <div className="diff-card-stats">
                   <span className="diff-stat">🎴 21 loại hình</span>
-                  <span className="diff-stat">⏱ 200 giây</span>
+                  <span className="diff-stat">⏱ 210 giây</span>
                   <span className="diff-stat">🔀 1 lần đổi</span>
                 </div>
               </div>
