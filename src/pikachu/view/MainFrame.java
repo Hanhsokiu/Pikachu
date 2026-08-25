@@ -148,7 +148,7 @@ public class MainFrame extends JFrame implements ActionListener, Runnable {
 
         bEasy  .addActionListener(e -> startNewGame(6,  6,  0, 400, 5));
         bNormal.addActionListener(e -> startNewGame(10, 10, 1, 300, 3));
-        bHard  .addActionListener(e -> startNewGame(14, 14, 2, 200, 1));
+        bHard  .addActionListener(e -> startNewGame(14, 14, 2, 210, 1));
         bBack  .addActionListener(e -> cardLayout.show(cardPanel, "HOME"));
 
         // Descriptions
